@@ -18,9 +18,15 @@ public class ConnectionSample {
 		RedisCommands<String, String> syncCommands = connection.sync();
 
 		syncCommands.set("key", "Hello, Redis!");
+		syncCommands.set("key", "Hello, Redis!" + System.currentTimeMillis());
+
+		syncCommands.set("ttl-data", "It is ttl data");
+		syncCommands.expire("ttl-data", 10);
 
 		connection.close();
 		redisClient.shutdown();
+
+		System.out.println("finish");
 
 	}
 }
