@@ -9,7 +9,7 @@ import redis.common.ConstantsRedis;
  *
  * @author 엄승하
  */
-public class ConnectionSample {
+public class SortedSetSample {
 
 	public static void main(String[] args) {
 
@@ -17,14 +17,19 @@ public class ConnectionSample {
 		StatefulRedisConnection<String, String> connection = redisClient.connect();
 		RedisCommands<String, String> syncCommands = connection.sync();
 
-		syncCommands.set("key", "Hello, Redis!");
-		syncCommands.set("key", "Hello, Redis!" + System.currentTimeMillis());
+		final String key = "rank";
 
-		syncCommands.set("ttl-data", "It is ttl data");
-		syncCommands.expire("ttl-data", 10);
+		if (syncCommands.exists(key) > 0) {
+			syncCommands.del("rank"); //테스트 데이터 저장 전에 삭제 진행
+		}
 
-		System.out.println("get key test:" + syncCommands.get("ttl-data"));
-		
+		//성능을 생각하면 가능하면 하나의 컬렉션에는 1만개 이하의 아이템을 담는게 좋음
+		for (int i = 1; i <= 100; i++) {
+			syncCommands.zadd(key, i, String.format("user-%s", i));
+		}
+
+		System.out.println(syncCommands.zrange(key, 1, 2));
+
 		connection.close();
 		redisClient.shutdown();
 
