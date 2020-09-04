@@ -3,6 +3,7 @@ package redis.sync;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import redis.common.ConstantsRedis;
+import redis.common.RedisClientConfig;
 
 /**
  *
@@ -12,7 +13,7 @@ public class PubSample {
 
 	public static void main(String[] args) {
 
-		RedisClient client = RedisClient.create(ConstantsRedis.REDIS_URI);
+		RedisClient client = RedisClient.create(RedisClientConfig.REDIS_URI);
 		StatefulRedisConnection<String, String> sender = client.connect();
 
 		//send to channel

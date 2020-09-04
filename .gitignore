@@ -29,3 +29,4 @@ mvnw.cmd
 /nbdist/
 /.nb-gradle/
 /excel/
+!/redis-deep-dive.iml

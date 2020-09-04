@@ -7,6 +7,7 @@ import io.lettuce.core.pubsub.RedisPubSubListener;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
 import redis.common.ConstantsRedis;
+import redis.common.RedisClientConfig;
 
 /**
  *
@@ -16,7 +17,7 @@ public class SubSample {
 
 	public static void main(String[] args) {
 
-		RedisClient client = RedisClient.create(ConstantsRedis.REDIS_URI);
+		RedisClient client = RedisClient.create(RedisClientConfig.REDIS_URI);
 
 		//subscribe
 		StatefulRedisPubSubConnection<String, String> con = client.connectPubSub();
@@ -51,7 +52,7 @@ public class SubSample {
 
 	public static void pub() {
 
-		RedisClient client = RedisClient.create(ConstantsRedis.REDIS_URI);
+		RedisClient client = RedisClient.create(RedisClientConfig.REDIS_URI);
 		StatefulRedisConnection<String, String> sender = client.connect();
 
 		System.out.println("start pub");

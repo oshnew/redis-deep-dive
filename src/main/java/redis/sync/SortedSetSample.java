@@ -3,7 +3,7 @@ package redis.sync;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
-import redis.common.ConstantsRedis;
+import redis.common.RedisClientConfig;
 
 /**
  *
@@ -13,7 +13,7 @@ public class SortedSetSample {
 
 	public static void main(String[] args) {
 
-		RedisClient redisClient = RedisClient.create(ConstantsRedis.REDIS_URI);
+		RedisClient redisClient = RedisClient.create(RedisClientConfig.REDIS_URI);
 		StatefulRedisConnection<String, String> connection = redisClient.connect();
 		RedisCommands<String, String> syncCommands = connection.sync();
 
