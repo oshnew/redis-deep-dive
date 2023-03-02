@@ -1,20 +1,19 @@
 package redis.sync;
 
-import io.lettuce.core.ClientOptions;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisConnectionException;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.cluster.ClusterClientOptions;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.resource.ClientResources;
+import io.lettuce.core.resource.DefaultClientResources;
+import io.lettuce.core.resource.Delay;
 import io.lettuce.core.support.ConnectionPoolSupport;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.time.Duration;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -35,7 +34,7 @@ public class ConnectionSampleWithPool {
 
 		testSetValue(pool, "key-pool-test-1", "key-pool-test-1");
 
-		int nThreads = 10;
+		int nThreads = 5;
 		CyclicBarrier barrier = new CyclicBarrier(nThreads + 1); //동시 테스트를 위해서 각각의 스레드를 대기처리할 목적
 		ExecutorService es = Executors.newFixedThreadPool(nThreads);
 
@@ -43,21 +42,23 @@ public class ConnectionSampleWithPool {
 
 			es.submit(() -> {
 				int idx = counter.addAndGet(1);
-				System.out.println(String.format("idx:'%s'", idx));
+				//System.out.println(String.format("idx:'%s'", idx));
 
-				barrier.await(); //대기: cyclicBarrier 를 생성할 때, 인자값으로 준 count 개수만큼 // await를 호출한다면 모든 쓰레드의 wait 상태가 종료
+				barrier.await(3000, TimeUnit.MILLISECONDS); //대기: cyclicBarrier 를 생성할 때, 인자값으로 준 count 개수만큼 // await를 호출한다면 모든 쓰레드의 wait 상태가 종료
 				System.out.println(String.format("getNumberWaiting: '%s'", barrier.getNumberWaiting()));
-				System.out.println(String.format("Thread idx: %s", idx));
+				//System.out.println(String.format("Thread idx: %s", idx));
 
 				testSetValue(pool, String.valueOf("test-thread-" + idx), String.valueOf(idx));
 				return null;
 			});
 		}
 
-		Thread.sleep(5 * 1000); //커넥션풀 close 전에 대기 후, redis-cli(서버)에서 client list 명령어로 현재 연결된 클라이언트 리스트를 확인해보면 됨
+		//Thread.sleep(5 * 1000); //커넥션풀 close 전에 대기 후, redis-cli(서버)에서 client list 명령어로 현재 연결된 클라이언트 리스트를 확인해보면 됨
 
 		barrier.await();
-		es.shutdown();
+		es.shutdown(); // 작업이 모두 완료되면 쓰레드풀을 종료
+
+		System.out.println(String.format("before finish getNumberWaiting: '%s'", barrier.getNumberWaiting()));
 
 		//pool.close();
 		System.out.println("finish");
@@ -90,8 +91,17 @@ public class ConnectionSampleWithPool {
 	 */
 	private static GenericObjectPool<StatefulRedisConnection<String, String>> nonClusterPoolUsage() {
 
-		RedisClient client = RedisClient.create(REDIS_CON_URL);
-		client.setOptions(ClientOptions.builder().autoReconnect(true).build());
+		ClientResources resources = DefaultClientResources.builder().reconnectDelay(Delay.fullJitter(Duration.ofMillis(100), // minimum 100 millisecond delay
+			Duration.ofSeconds(5),      // maximum 5 second delay
+			100, TimeUnit.MILLISECONDS) // 100 millisecond base
+		).build(); //지수 Backoff Jitter 설정
+
+		RedisClient client = RedisClient.create(resources, REDIS_CON_URL);
+		//		client.setOptions(ClientOptions.builder().autoReconnect(true).build());
+		//Configure a client-side timeout설정
+		client.setOptions(ClientOptions.builder().socketOptions(SocketOptions.builder().connectTimeout(Duration.ofMillis(100)).build()) // 100 millisecond connection timeout
+			.timeoutOptions(TimeoutOptions.builder().fixedTimeout(Duration.ofSeconds(5)).build()) // 5 second command timeout
+			.build());
 
 		return ConnectionPoolSupport.createGenericObjectPool(() -> client.connect(), createPoolConfig());
 	}
